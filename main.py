@@ -1,4 +1,4 @@
-# Std library imports
+# Std lib imports
 from dataclasses import dataclass, field
 import datetime
 import sqlite3
@@ -28,7 +28,7 @@ class MainWin(ctk.CTk):
 
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, eq=True)
 class Application:
     name: str
     class_id: int
@@ -36,10 +36,22 @@ class Application:
     due_time: datetime.time = field(default_factory=datetime.time)
     
 
+    def is_unique(self, connection: sqlite3.Connection) -> bool:
+        # Not finished
+        c = connection.cursor()
+
+        c.execute("SELECT * FROM deadlines WHERE conditions")
+
+
     def add_to_database(self, connection: sqlite3.Connection) -> None:
         
         try:
             c = connection.cursor()
+
+            if (not self.is_unique()):
+                raise Exception("Deadline is already in the database")
+            
+            
 
             c.execute("INSERT INTO deadlines VALUES (:deadline, :time, :name, :class_id)",
                       {"deadline": str(self.due_date), "time": str(self.due_time), "name": self.name, "class_id":self.class_id})
@@ -83,8 +95,12 @@ def create_database(connection: sqlite3.Connection) -> None:
         raise e
 
 
-def show_in_database() -> None:
-    return NotImplementedError
+def show_in_database(connection: sqlite3.Connection) -> None:
+    c = connection.cursor()
+
+    c.execute("SELECT * FROM deadlines")
+    print(c.fetchall())
+
 
 
 def main():
@@ -97,6 +113,8 @@ def main():
 
     app = Application("test", 1, datetime.date.fromisoformat('20250430'), datetime.time(18))
     app.add_to_database(conn)
+
+    show_in_database(conn)
     
 
     conn.close()
